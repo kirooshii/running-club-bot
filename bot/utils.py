@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
@@ -10,6 +11,8 @@ from .db import WAITING, get_announced_week, get_users_by_status, set_subscribed
 from .keyboards import monday_kb, take_spot_kb
 from .texts import get_text
 from .weeks import current_week_key
+
+log = logging.getLogger(__name__)
 
 
 async def safe_send(
@@ -28,8 +31,10 @@ async def safe_send(
             await bot.send_message(user_id, text, reply_markup=reply_markup)
             return True
         except Exception:
+            log.warning("safe_send retry failed for user %s", user_id, exc_info=True)
             return False
     except Exception:
+        log.warning("safe_send failed for user %s", user_id, exc_info=True)
         return False
 
 
@@ -75,8 +80,10 @@ async def safe_send_photo(
             await bot.send_photo(user_id, photo, caption=caption)
             return True
         except Exception:
+            log.warning("safe_send_photo retry failed for user %s", user_id, exc_info=True)
             return False
     except Exception:
+        log.warning("safe_send_photo failed for user %s", user_id, exc_info=True)
         return False
 
 

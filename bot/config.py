@@ -15,8 +15,22 @@ def _parse_ids(raw: str) -> set[int]:
 
 
 def _parse_hhmm(value: str) -> tuple[int, int]:
-    hours, minutes = value.split(":")
-    return int(hours), int(minutes)
+    try:
+        hours, minutes = (int(p) for p in value.split(":"))
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid time {value!r}: expected HH:MM") from exc
+    if not (0 <= hours <= 23 and 0 <= minutes <= 59):
+        raise RuntimeError(
+            f"Invalid time {value!r}: hours must be 0-23, minutes 0-59"
+        )
+    return hours, minutes
+
+
+def _parse_capacity(raw: str) -> int:
+    try:
+        return max(1, int(raw))
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid CAPACITY {raw!r}: expected an integer") from exc
 
 
 @dataclass
@@ -47,7 +61,7 @@ def load_config() -> Config:
         bot_token=token,
         db_path=os.getenv("DATABASE_PATH", "data/bot.db"),
         timezone=timezone,
-        capacity=max(1, int(os.getenv("CAPACITY", "30"))),
+        capacity=_parse_capacity(os.getenv("CAPACITY", "30")),
         admin_ids=_parse_ids(os.getenv("ADMIN_IDS", "")),
         monday_time=_parse_hhmm(os.getenv("MONDAY_OPEN_TIME", "10:00")),
         friday_time=_parse_hhmm(os.getenv("FRIDAY_REMINDER_TIME", "09:00")),

@@ -230,6 +230,12 @@ async def get_users_by_status(week_key: str, status: str) -> list[int]:
         return [row[0] for row in await cur.fetchall()]
 
 
+async def get_status(user_id: int, week_key: str):
+    """Public accessor for a user's status in a given week (or ``None``)."""
+    async with _connect() as db:
+        return await _get_status(user_id, week_key, db)
+
+
 async def set_status(user_id: int, week_key: str, status: str) -> None:
     async with _lock, _connect() as db:
         now = _now()

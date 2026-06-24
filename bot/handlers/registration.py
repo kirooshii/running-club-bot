@@ -15,6 +15,7 @@ from ..db import (
     REGISTERED,
     cancel_registration,
     ensure_user,
+    get_status,
     is_registration_open,
     register_user,
     set_status,
@@ -137,6 +138,9 @@ async def on_no(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
     user_id = cb.from_user.id
     week = _week(callback_data)
     await ensure_user(user_id)
+    if await get_status(user_id, week) == REGISTERED:
+        await cb.answer(await get_text("already_registered"), show_alert=True)
+        return
     await set_status(user_id, week, DECLINED)
 
     await _clear_inline(cb)
