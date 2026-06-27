@@ -1,4 +1,4 @@
-# Lada — Running Club Bot
+# Running Club Bot
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![aiogram](https://img.shields.io/badge/aiogram-3.x-2CA5E0)
