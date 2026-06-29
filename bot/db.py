@@ -114,6 +114,23 @@ async def set_capacity(value: int) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# text photos (file_id stored per text key)
+# --------------------------------------------------------------------------- #
+async def get_text_photo(key: str) -> str | None:
+    return await get_setting(f"photo:{key}")
+
+
+async def set_text_photo(key: str, file_id: str) -> None:
+    await set_setting(f"photo:{key}", file_id)
+
+
+async def delete_text_photo(key: str) -> None:
+    async with _connect() as db:
+        await db.execute("DELETE FROM settings WHERE key = ?", (f"photo:{key}",))
+        await db.commit()
+
+
+# --------------------------------------------------------------------------- #
 # announcement tracking (which week's registration is currently open)
 # --------------------------------------------------------------------------- #
 async def get_announced_week() -> str | None:

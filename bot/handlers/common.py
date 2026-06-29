@@ -9,7 +9,7 @@ from ..config import config
 from ..db import ensure_user, is_subscribed, set_subscribed
 from ..keyboards import subscribe_kb
 from ..texts import get_text
-from ..utils import maybe_relay_announcement
+from ..utils import maybe_relay_announcement, resolve_message, safe_send
 
 router = Router()
 
@@ -23,7 +23,11 @@ async def cmd_start(message: Message, bot: Bot) -> None:
         # Re-send the current run's card if registration is already open.
         await maybe_relay_announcement(bot, user_id)
     else:
-        await message.answer(await get_text("welcome"), reply_markup=subscribe_kb())
+        text, photo = await resolve_message("welcome")
+        if photo:
+            await bot.send_photo(user_id, photo, caption=text, reply_markup=subscribe_kb())
+        else:
+            await message.answer(text, reply_markup=subscribe_kb())
 
 
 @router.message(Command("stop"))

@@ -16,7 +16,7 @@ from .db import (
 )
 from .keyboards import cancel_kb, monday_kb
 from .texts import get_text
-from .utils import broadcast
+from .utils import broadcast, resolve_message
 from .weeks import current_week_key
 
 log = logging.getLogger(__name__)
@@ -26,10 +26,10 @@ async def open_registration(bot: Bot) -> int:
     """Broadcast the Monday "registration is open" message to subscribers."""
     week = current_week_key()
     await set_announced_week(week)
-    text = await get_text("monday_open", week)
+    text, photo = await resolve_message("monday_open", week)
     kb = monday_kb(week)
     users = await get_subscribed_users()
-    sent = await broadcast(bot, users, text, reply_markup=kb)
+    sent = await broadcast(bot, users, text, reply_markup=kb, photo=photo)
     log.info("open_registration week=%s sent=%s/%s", week, sent, len(users))
     return sent
 
@@ -37,10 +37,10 @@ async def open_registration(bot: Bot) -> int:
 async def send_reminders(bot: Bot) -> int:
     """Send the Friday reminder to currently registered users only."""
     week = current_week_key()
-    text = await get_text("reminder", week)
+    text, photo = await resolve_message("reminder", week)
     kb = cancel_kb(week)
     users = await get_users_by_status(week, REGISTERED)
-    sent = await broadcast(bot, users, text, reply_markup=kb)
+    sent = await broadcast(bot, users, text, reply_markup=kb, photo=photo)
     log.info("send_reminders week=%s sent=%s/%s", week, sent, len(users))
     return sent
 

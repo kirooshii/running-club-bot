@@ -30,7 +30,7 @@ from ..keyboards import (
     change_mind_kb,
 )
 from ..texts import get_text
-from ..utils import maybe_relay_announcement, notify_waiting
+from ..utils import maybe_relay_announcement, notify_waiting, resolve_message, safe_send
 from ..weeks import current_week_key
 
 router = Router()
@@ -57,17 +57,15 @@ async def _do_cancel(bot: Bot, user_id: int, week: str) -> None:
     """
     prev = await cancel_registration(user_id, week)
     if prev == REGISTERED:
-        await bot.send_message(
-            user_id, await get_text("cancelled", week), reply_markup=ReplyKeyboardRemove()
-        )
+        text, photo = await resolve_message("cancelled", week)
+        await safe_send(bot, user_id, text, reply_markup=ReplyKeyboardRemove(), photo=photo)
         # Only invite claims while registration is still open.
         if await is_registration_open(week):
             await notify_waiting(bot, week)
     elif prev == "waiting":
-        await bot.send_message(
-            user_id,
-            await get_text("cancelled_waiting", week),
-            reply_markup=ReplyKeyboardRemove(),
+        text, photo = await resolve_message("cancelled_waiting", week)
+        await safe_send(
+            bot, user_id, text, reply_markup=ReplyKeyboardRemove(), photo=photo,
         )
     else:  # none / not_active
         await bot.send_message(
@@ -93,10 +91,15 @@ async def on_subscribe(cb: CallbackQuery, bot: Bot) -> None:
     user_id = cb.from_user.id
     await ensure_user(user_id)
     await set_subscribed(user_id, True)
+    text, photo = await resolve_message("subscribed")
     try:
-        await cb.message.edit_text(await get_text("subscribed"), reply_markup=None)
+        if photo:
+            await cb.message.delete()
+            await bot.send_photo(user_id, photo, caption=text)
+        else:
+            await cb.message.edit_text(text, reply_markup=None)
     except Exception:
-        await bot.send_message(user_id, await get_text("subscribed"))
+        await safe_send(bot, user_id, text, photo=photo)
     # If a run is already announced for the current week, send its card too.
     await maybe_relay_announcement(bot, user_id)
     await cb.answer("Подписка оформлена")
@@ -123,10 +126,8 @@ async def on_yes(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
         "registered": "confirm_registered",
         "waiting": "confirm_waiting",
     }[result]
-    # New message so we can attach the persistent reply keyboard.
-    await bot.send_message(
-        user_id, await get_text(key, week), reply_markup=cancel_reply_kb()
-    )
+    text, photo = await resolve_message(key, week)
+    await safe_send(bot, user_id, text, reply_markup=cancel_reply_kb(), photo=photo)
     await cb.answer()
 
 
@@ -144,9 +145,8 @@ async def on_no(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
     await set_status(user_id, week, DECLINED)
 
     await _clear_inline(cb)
-    await bot.send_message(
-        user_id, await get_text("decline_no", week), reply_markup=change_mind_kb(week)
-    )
+    text, photo = await resolve_message("decline_no", week)
+    await safe_send(bot, user_id, text, reply_markup=change_mind_kb(week), photo=photo)
     await cb.answer()
 
 
@@ -175,9 +175,8 @@ async def on_take(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
     result = await take_spot(user_id, week)
     if result == "ok":
         await _clear_inline(cb)
-        await bot.send_message(
-            user_id, await get_text("spot_taken_success", week), reply_markup=cancel_reply_kb()
-        )
+        text, photo = await resolve_message("spot_taken_success", week)
+        await safe_send(bot, user_id, text, reply_markup=cancel_reply_kb(), photo=photo)
         await cb.answer("Место твоё!")
     elif result == "full":
         await cb.answer(await get_text("spot_taken"), show_alert=True)

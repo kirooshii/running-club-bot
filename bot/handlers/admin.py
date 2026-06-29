@@ -8,11 +8,14 @@ from aiogram.types import CallbackQuery, Message
 from ..config import config
 from ..db import (
     clear_announced_week,
+    delete_text_photo,
     get_capacity,
     get_subscribed_users,
+    get_text_photo,
     get_users_by_status,
     is_registration_open,
     set_capacity,
+    set_text_photo,
     count_subscribed,
     week_stats,
 )
@@ -26,6 +29,8 @@ router = Router()
 
 # Pending photo broadcast per admin: {admin_id: {"file_id", "caption"}}.
 _pending_photo: dict[int, dict] = {}
+# Pending setphoto: {admin_id: text_key}.
+_pending_setphoto: dict[int, str] = {}
 
 
 class IsAdmin(Filter):
@@ -43,6 +48,8 @@ HELP_TEXT = (
     "/texts — список редактируемых текстов\n"
     "/settext ключ текст — переопределить текст\n"
     "/resettext ключ — сбросить текст\n"
+    "/setphoto ключ — прикрепить фото к тексту (затем отправь фото)\n"
+    "/resetphoto ключ — удалить прикреплённое фото\n"
     "/trigger_open — открыть запись (рассылка понедельника)\n"
     "/trigger_close — закрыть запись (без новых заявок)\n"
     "/trigger_reminder — запустить напоминания\n"
@@ -105,10 +112,15 @@ async def cmd_broadcast(message: Message, command: CommandObject) -> None:
 
 @router.message(Command("texts"), IsAdmin())
 async def cmd_texts(message: Message) -> None:
-    keys = "\n".join(sorted(DEFAULT_TEXTS))
+    lines = []
+    for key in sorted(DEFAULT_TEXTS):
+        photo = await get_text_photo(key)
+        marker = " 🖼" if photo else ""
+        lines.append(f"{key}{marker}")
     await message.answer(
-        f"Редактируемые тексты:\n{keys}\n\n"
-        "Пример: /settext welcome Привет!"
+        f"Редактируемые тексты:\n" + "\n".join(lines) + "\n\n"
+        "Пример: /settext welcome Привет!\n"
+        "/setphoto ключ — прикрепить фото"
     )
 
 
@@ -140,6 +152,26 @@ async def cmd_resettext(message: Message, command: CommandObject) -> None:
     await message.answer(f"Текст «{key}» сброшен к значению по умолчанию.")
 
 
+@router.message(Command("setphoto"), IsAdmin())
+async def cmd_setphoto(message: Message, command: CommandObject) -> None:
+    key = (command.args or "").strip()
+    if key not in DEFAULT_TEXTS:
+        await message.answer(f"Неизвестный ключ «{key}». Список: /texts")
+        return
+    _pending_setphoto[message.from_user.id] = key
+    await message.answer(f"Отправь фото для текста «{key}» (с подписью или без).")
+
+
+@router.message(Command("resetphoto"), IsAdmin())
+async def cmd_resetphoto(message: Message, command: CommandObject) -> None:
+    key = (command.args or "").strip()
+    if key not in DEFAULT_TEXTS:
+        await message.answer(f"Неизвестный ключ «{key}». Список: /texts")
+        return
+    await delete_text_photo(key)
+    await message.answer(f"Фото для «{key}» удалено.")
+
+
 @router.message(Command("trigger_open"), IsAdmin())
 async def cmd_trigger_open(message: Message) -> None:
     await message.answer("Запускаю рассылку открытия записи...")
@@ -166,12 +198,33 @@ async def cmd_trigger_reminder(message: Message) -> None:
     await message.answer(f"Готово. Напоминаний отправлено: {sent}.")
 
 
-# photo broadcast: admin sends a photo (with optional caption) -> confirm
+# photo handler: check for /setphoto caption first, then pending setphoto, then broadcast
 @router.message(F.photo, IsAdmin())
 async def on_admin_photo(message: Message) -> None:
-    file_id = message.photo[-1].file_id  # highest resolution
+    file_id = message.photo[-1].file_id
     caption = message.caption or ""
-    _pending_photo[message.from_user.id] = {"file_id": file_id, "caption": caption}
+    admin_id = message.from_user.id
+
+    # Support inline "/setphoto key" in the photo caption.
+    if caption.startswith("/setphoto"):
+        parts = caption.split(maxsplit=1)
+        key = parts[1].strip() if len(parts) > 1 else ""
+        if key in DEFAULT_TEXTS:
+            await set_text_photo(key, file_id)
+            await message.answer(f"Фото прикреплено к «{key}».")
+        else:
+            await message.answer(f"Неизвестный ключ «{key}». Список: /texts")
+        return
+
+    # Two-step flow: /setphoto <key> then send a photo.
+    key = _pending_setphoto.pop(admin_id, None)
+    if key:
+        await set_text_photo(key, file_id)
+        await message.answer(f"Фото прикреплено к «{key}».")
+        return
+
+    # Default: broadcast this photo.
+    _pending_photo[admin_id] = {"file_id": file_id, "caption": caption}
     preview = (caption + "\n\n" if caption else "") + "📩 Разослать это фото всем подписчикам?"
     await message.answer(preview, reply_markup=broadcast_confirm_kb())
 
