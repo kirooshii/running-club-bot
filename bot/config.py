@@ -42,7 +42,6 @@ class Config:
     admin_ids: set[int] = field(default_factory=set)
     monday_time: tuple[int, int] = (10, 0)
     friday_time: tuple[int, int] = (9, 0)
-    event_info: str = ""
 
 
 def load_config() -> Config:
@@ -65,7 +64,6 @@ def load_config() -> Config:
         admin_ids=_parse_ids(os.getenv("ADMIN_IDS", "")),
         monday_time=_parse_hhmm(os.getenv("MONDAY_OPEN_TIME", "10:00")),
         friday_time=_parse_hhmm(os.getenv("FRIDAY_REMINDER_TIME", "09:00")),
-        event_info=os.getenv("EVENT_INFO", "каждое воскресенье в 18:30"),
     )
 
 

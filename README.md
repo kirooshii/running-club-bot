@@ -110,7 +110,6 @@ pm2 logs lada-bot
 | `ADMIN_IDS` | Comma‑separated admin Telegram IDs | — |
 | `MONDAY_OPEN_TIME` | `HH:MM` registration opens (Mon) | `10:00` |
 | `FRIDAY_REMINDER_TIME` | `HH:MM` for the reminder (Fri) | `09:00` |
-| `EVENT_INFO` | Short event line, interpolated into texts via `{event_info}` | — |
 
 ## Admin commands
 

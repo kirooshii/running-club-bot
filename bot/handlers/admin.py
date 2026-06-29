@@ -166,9 +166,7 @@ async def cmd_trigger_reminder(message: Message) -> None:
     await message.answer(f"Готово. Напоминаний отправлено: {sent}.")
 
 
-# --------------------------------------------------------------------------- #
 # photo broadcast: admin sends a photo (with optional caption) -> confirm
-# --------------------------------------------------------------------------- #
 @router.message(F.photo, IsAdmin())
 async def on_admin_photo(message: Message) -> None:
     file_id = message.photo[-1].file_id  # highest resolution

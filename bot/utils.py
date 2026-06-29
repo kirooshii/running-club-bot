@@ -60,7 +60,7 @@ async def notify_waiting(bot: Bot, week: str) -> int:
     waiters = await get_users_by_status(week, WAITING)
     if not waiters:
         return 0
-    text = await get_text("spot_freed")
+    text = await get_text("spot_freed", week)
     return await broadcast(bot, waiters, text, reply_markup=take_spot_kb(week))
 
 
@@ -109,5 +109,5 @@ async def maybe_relay_announcement(bot: Bot, user_id: int) -> bool:
     week = current_week_key()
     if await get_announced_week() != week:
         return False
-    text = await get_text("monday_open")
+    text = await get_text("monday_open", week)
     return await safe_send(bot, user_id, text, reply_markup=monday_kb(week))

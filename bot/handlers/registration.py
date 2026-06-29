@@ -58,7 +58,7 @@ async def _do_cancel(bot: Bot, user_id: int, week: str) -> None:
     prev = await cancel_registration(user_id, week)
     if prev == REGISTERED:
         await bot.send_message(
-            user_id, await get_text("cancelled"), reply_markup=ReplyKeyboardRemove()
+            user_id, await get_text("cancelled", week), reply_markup=ReplyKeyboardRemove()
         )
         # Only invite claims while registration is still open.
         if await is_registration_open(week):
@@ -66,7 +66,7 @@ async def _do_cancel(bot: Bot, user_id: int, week: str) -> None:
     elif prev == "waiting":
         await bot.send_message(
             user_id,
-            await get_text("cancelled_waiting"),
+            await get_text("cancelled_waiting", week),
             reply_markup=ReplyKeyboardRemove(),
         )
     else:  # none / not_active
@@ -125,7 +125,7 @@ async def on_yes(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
     }[result]
     # New message so we can attach the persistent reply keyboard.
     await bot.send_message(
-        user_id, await get_text(key), reply_markup=cancel_reply_kb()
+        user_id, await get_text(key, week), reply_markup=cancel_reply_kb()
     )
     await cb.answer()
 
@@ -145,7 +145,7 @@ async def on_no(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
 
     await _clear_inline(cb)
     await bot.send_message(
-        user_id, await get_text("decline_no"), reply_markup=change_mind_kb(week)
+        user_id, await get_text("decline_no", week), reply_markup=change_mind_kb(week)
     )
     await cb.answer()
 
@@ -176,7 +176,7 @@ async def on_take(cb: CallbackQuery, callback_data: RegCB, bot: Bot) -> None:
     if result == "ok":
         await _clear_inline(cb)
         await bot.send_message(
-            user_id, await get_text("spot_taken_success"), reply_markup=cancel_reply_kb()
+            user_id, await get_text("spot_taken_success", week), reply_markup=cancel_reply_kb()
         )
         await cb.answer("Место твоё!")
     elif result == "full":

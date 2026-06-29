@@ -1,75 +1,104 @@
 """User-facing message texts.
 
-All texts are Russian placeholders. ``{event_info}`` is filled from the
-``EVENT_INFO`` setting. Any key can be overridden at runtime via the admin
-``/settext`` command (stored in the DB) or permanently by editing
+``{event_info}`` is auto-computed as the Saturday run date (e.g. ``4 июля``)
+for the given registration week. Any text key can be overridden at runtime via
+the admin ``/settext`` command (stored in the DB) or permanently by editing
 ``DEFAULT_TEXTS`` below.
 """
 from __future__ import annotations
 
-from .config import config
 from .db import get_setting, set_setting
+from .weeks import format_run_date, run_date_from_week
 
 DEFAULT_TEXTS: dict[str, str] = {
     "welcome": (
-        "Привет! Это бот бегового клуба.\n\n"
-        "Каждый понедельник здесь открывается запись на ближайшую пробежку "
-        "({event_info}). Нажми кнопку ниже, чтобы подписаться на уведомления."
+        "Привет! Мы — беговой клуб WellProducts x Finch. То самое «третье место», где можно выдохнуть после работы, найти друзей и зарядиться энергией.\n"
+        "Чтобы не пропустить наши забеги и классные конкурсы — подписывайся на канал."
     ),
     "subscribed": (
         "Поздравляем с регистрацией!\n\n"
-        "Всю информацию о следующем забеге пришлём ближе к дате тренировки.\n"
-        "Побежали вместе!"
     ),
     "unsubscribed": "Ты отписан от рассылки. Подписаться снова — /start.",
     "monday_open": (
-        "Открыта запись на ближайший беговой клуб!\n\n"
-        "Когда: {event_info}.\n\n"
-        "Записываешься?"
+        "Открываем запись на забег {event_info}!\n\n"
+        "В эту субботу снова встречаемся в Finch, чтобы размяться, отключить голову от рабочих чатов и по-настоящему настроиться на выходные.\n\n"
+        "Детали встречи:\n\n"
+        "Дата: {event_info}\n"
+        "Локация: кафе Finch (Газетный переулок, 5)\n"
+        "Сбор: 18:00\n"
+        "Разминка: 18:30\n\n"
+
+        "Кто ведет?\n"
+        "Валерий Вершинин — фитнес-эксперт с 12-летним стажем, тренер FPA и основатель аутдор-движения. В прошлом — наставник топовых клубов World Class и X-Fit. С ним безопасно и драйвово!\n\n"
+
+        "Что ждет на финише?\n"
+        "Бодрящий фильтр-кофе, витаминизированная вода и лимонады WellDrink и сытные батончики WellBar. Восстанавливаем силы с удовольствием!\n\n"
+        "Жми на кнопку ниже, чтобы записаться. Количество мест ограничено!"
     ),
+
     "confirm_registered": (
-        "Запись принята! Ждём тебя на клубе.\n\n"
-        "Если планы изменятся — отмени запись кнопкой ниже, чтобы место "
-        "досталось кому-то ещё."
+        "Отлично! Ты с нами!\n"
+        "Мы сохранили твое место и обязательно напомним о всех деталях перед стартом.\n"
+        "А пока — готовь кроссовки и хорошее настроение. Побежали вместе! 🏃‍♂️"
     ),
     "confirm_waiting": (
-        "Мест уже нет — ты в листе ожидания.\n\n"
-        "Если кто-то отменит запись, пришлю уведомление и ты сможешь занять "
-        "свободное место."
+        "Регистрация на этот забег закрыта. Ты автоматически попал в лист ожидания.\n"
+        "Как только появится свободное место — мы сразу же пришлем тебе  уведомление.\n\n"
+        "А пока можешь подкрепиться белком и хорошенько отдохнуть. В следующий раз обязательно успеем!"
     ),
     "decline_no": (
-        "Жаль, что не получится. Впереди ещё много беговых клубов — "
-        "{event_info}. До встречи!"
+        "Жаль, что не получится. Следующий забег — {event_info}. До встречи!"
     ),
-    "cancelled": "Запись отменена, место освобождено.",
+    "cancelled": (
+        "Регистрация отменена. Спасибо, что предупредил!\n"
+        "Твое место освободилось для другого бегуна. Мы будем скучать, но обязательно ждем тебя на следующей тренировке в нашем клубе. "
+    ),
     "cancelled_waiting": "Ты удалён из листа ожидания.",
     "spot_freed": (
-        "Освободилось место на беговый клуб! Можешь занять его кнопкой ниже "
-        "(достанется тому, кто нажмёт первым)."
+        "🚨 Ура! Освободилось место!\n\n"
+        "Пока кто-то решил остаться дома, мы подумали о тебе. Хочешь пробежаться с нами?\n\n"
+        "Детали встречи:\n\n"
+        "Дата: {event_info}\n"
+        "Локация: кафе Finch (Газетный переулок, 5)\n"
+        "Сбор: 18:00\n"
+        "Разминка: 18:30\n"
+        "Жми на кнопку ниже, чтобы записаться"
     ),
     "spot_taken": "Место уже заняли — ты остаёшься в листе ожидания.",
     "spot_taken_success": "Отлично, место твоё! Запись подтверждена.",
+    
     "reminder": (
-        "Напоминание: завтра беговой клуб, ждём тебя!\n\n"
-        "Если планы изменились — отмени запись кнопкой ниже."
+        "Напоминаем: наш забег уже ЗАВТРА!\n\n"
+        "Разминаемся и готовимся к классному вечеру в компании WellProducts x Finch.\n\n"
+
+        "🕕 Сбор в 18:00 (разминка в 18:30)\n"
+        "📍 Finch на Газетном, 5\n\n"
+        "Важно: если планы изменились и ты не сможешь прийти, пожалуйста, отмени регистрацию. Пожалуйста, не забудь отменить регистрацию, если твои планы изменились 💚\n\n"
+        "До встречи!"
     ),
     "already_registered": "Ты уже записан на этот клуб.",
     "registration_closed": "Запись на этот клуб уже закрыта.",
 }
 
 
-def _format(value: str) -> str:
+def _format(value: str, week: str | None = None) -> str:
+    if not week:
+        return value
     try:
-        return value.format(event_info=config.event_info)
-    except (KeyError, IndexError):
+        run = run_date_from_week(week)
+    except (ValueError, TypeError):
+        return value
+    try:
+        return value.format(event_info=format_run_date(run))
+    except (KeyError, IndexError, ValueError):
         return value
 
 
-async def get_text(key: str) -> str:
+async def get_text(key: str, week: str | None = None) -> str:
     raw = await get_setting(f"text:{key}")
     if raw is None:
         raw = DEFAULT_TEXTS.get(key, f"[{key}]")
-    return _format(raw)
+    return _format(raw, week)
 
 
 async def set_text(key: str, value: str) -> None:
