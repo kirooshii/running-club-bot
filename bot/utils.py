@@ -27,9 +27,9 @@ async def safe_send(
     """Send a message (or photo+keyboard with caption); on ``Forbidden`` mark
     the user unsubscribed."""
     coro = (
-        bot.send_photo(user_id, photo, caption=text, reply_markup=reply_markup)
+        bot.send_photo(user_id, photo, caption=text, reply_markup=reply_markup, parse_mode="HTML")
         if photo
-        else bot.send_message(user_id, text, reply_markup=reply_markup)
+        else bot.send_message(user_id, text, reply_markup=reply_markup, parse_mode="HTML")
     )
     try:
         await coro
@@ -89,7 +89,7 @@ async def safe_send_photo(
 ) -> bool:
     """Send a photo; on ``Forbidden`` mark the user unsubscribed."""
     try:
-        await bot.send_photo(user_id, photo, caption=caption, reply_markup=reply_markup)
+        await bot.send_photo(user_id, photo, caption=caption, reply_markup=reply_markup, parse_mode="HTML")
         return True
     except TelegramForbiddenError:
         await set_subscribed(user_id, False)
@@ -97,7 +97,7 @@ async def safe_send_photo(
     except TelegramRetryAfter as exc:
         await asyncio.sleep(exc.retry_after)
         try:
-            await bot.send_photo(user_id, photo, caption=caption, reply_markup=reply_markup)
+            await bot.send_photo(user_id, photo, caption=caption, reply_markup=reply_markup, parse_mode="HTML")
             return True
         except Exception:
             log.warning("safe_send_photo retry failed for user %s", user_id, exc_info=True)

@@ -72,6 +72,7 @@ async def _do_cancel(bot: Bot, user_id: int, week: str) -> None:
             user_id,
             "Активной записи нет.",
             reply_markup=ReplyKeyboardRemove(),
+            parse_mode="HTML",
         )
 
 
@@ -95,7 +96,7 @@ async def on_subscribe(cb: CallbackQuery, bot: Bot) -> None:
     try:
         if photo:
             await cb.message.delete()
-            await bot.send_photo(user_id, photo, caption=text)
+            await bot.send_photo(user_id, photo, caption=text, parse_mode="HTML")
         else:
             await cb.message.edit_text(text, reply_markup=None)
     except Exception:

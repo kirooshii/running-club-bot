@@ -25,7 +25,7 @@ async def cmd_start(message: Message, bot: Bot) -> None:
     else:
         text, photo = await resolve_message("welcome")
         if photo:
-            await bot.send_photo(user_id, photo, caption=text, reply_markup=subscribe_kb())
+            await bot.send_photo(user_id, photo, caption=text, reply_markup=subscribe_kb(), parse_mode="HTML")
         else:
             await message.answer(text, reply_markup=subscribe_kb())
 
